@@ -1,0 +1,5 @@
+datasets
+wandb
+# GPU-only (Kaggle): install in the notebook
+# unsloth
+# trl
