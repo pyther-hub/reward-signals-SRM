@@ -1,0 +1,28 @@
+# Claude / personal notes
+CLAUDE.md
+TODO.md
+
+# Reference material
+book.pdf
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Experiment outputs
+checkpoints/
+outputs/
+wandb/
+*.safetensors
+*.bin
+*.pt
+
+# OS
+.DS_Store
+
+/code_test
+policy_gradient.ipynb
+
+.env
