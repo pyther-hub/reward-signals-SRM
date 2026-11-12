@@ -35,6 +35,8 @@ def run_sharded_eval(data_dir, splits, out_dir, adapter=None, limit=None, batch_
 def main(data_dir, splits, out_dir, rank, world, adapter, limit, batch_size):
     from common import get_logger
     from model7b import generate_greedy, load_model
+    from transformers.utils import logging as hf_logging
+    hf_logging.set_verbosity_error()      # hide the per-batch "max_new_tokens and max_length both set" warning (max_new_tokens wins)
     rank, world, limit, batch_size = int(rank), int(world), int(limit) or None, int(batch_size)
     log = get_logger(name=f"gpu{rank}")
     t0 = time.time()
@@ -43,8 +45,9 @@ def main(data_dir, splits, out_dir, rank, world, adapter, limit, batch_size):
     for split in splits.split(","):
         df = load_split(data_dir, split, limit)
         order = df.question.str.len().sort_values(ascending=False).index[rank::world]   # long first, less padding
+        log.info(f"{split}: {len(order)} problems, batch {batch_size}")
         t0 = time.time()
-        texts, n_tokens = generate_greedy(model, tok, list(df.question[order]), batch_size)
+        texts, n_tokens = generate_greedy(model, tok, list(df.question[order]), batch_size, log=log)
         rows = []
         for idx, text, n in zip(order, texts, n_tokens):
             pred, has_format = extract_pred(text)
