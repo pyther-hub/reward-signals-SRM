@@ -4,12 +4,12 @@ parent: Experiments
 nav_order: 6
 ---
 
-# 06 GRPO with outcome reward (Exp 4, control run)
+# 06 GRPO with outcome reward
 
 [Kaggle notebook](https://www.kaggle.com/code/tensorpanda231/06-grpo-0-5b)
 
 ## Goal
-Reinforcement learning from the [RFT-SFT model]({{ site.baseurl }}{% link experiments/05-sft-rft.md %}), with the simplest possible reward: 1 if the final `#### <number>` is correct, else 0. This is the control run. Later reward signals (LLM judge, teacher distillation) and Dr. GRPO reuse exactly this config.
+Reinforcement learning from the [RFT-SFT model]({{ site.baseurl }}{% link experiments/05-sft-rft.md %}), with the simplest possible reward: 1 if the final `#### <number>` is correct, else 0.
 
 ## Setup
 - **Start and reference model:** RFT-SFT from 05, full fine-tuning (fp32 master weights, fp16 mixed precision).
@@ -57,7 +57,7 @@ Reinforcement learning from the [RFT-SFT model]({{ site.baseurl }}{% link experi
 - **SVAMP barely moved (+1.3, within noise).** RL on GSM8K mostly sharpened GSM8K-style solving, while most of the generalization gain came from RFT. A paired significance test is still to do.
 - **The run is healthy:** small KL, no entropy collapse, no length blow-up, format kept. With a binary, format-gated reward there was no sign of reward hacking.
 - **Wasted compute:** ~45% of groups were all-correct (the mean reward is 0.67), so they gave zero advantage. The prompt filter used the *base* model's 8/8 stats; filtering with the RFT-SFT model, or dynamic sampling, would recover most of this.
-- **The config is conservative:** KL is only 0.012 and the KL term is negligible, so a higher learning rate would likely move faster. The config is still kept frozen so that Dr. GRPO and Exp 5–6 compare against the same control.
+- **The config is conservative:** KL is only 0.012, so a higher learning rate would likely move faster.
 
 ## Cost
 9.6 h of training on 2 GPUs = **19.2 GPU-hours**. The vLLM GPU is mostly idle while the training GPU works. Final eval on one GPU: ~0.6 GPU-h.

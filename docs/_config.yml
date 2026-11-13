@@ -11,4 +11,4 @@ search_enabled: true
 heading_anchors: true
 aux_links:
   GitHub: https://github.com/pyther-hub/reward-signals-SRM
-footer_content: "Qwen2.5-0.5B-Instruct · GSM8K + SVAMP · Kaggle 2×T4"
+footer_content: "Qwen2.5-0.5B-Instruct · GSM8K + SVAMP"
