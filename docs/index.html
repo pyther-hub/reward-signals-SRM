@@ -72,7 +72,10 @@ td.l{text-align:left}
 .ex h4{margin:0;padding:6px 10px;font:600 12.5px var(--sans);border-bottom:1px solid var(--rule);background:var(--soft)}
 .ex pre{margin:0;padding:10px;font:400 12.5px/1.55 var(--mono);white-space:pre-wrap}
 ol.refs{padding-left:22px;font-size:15px;line-height:1.5}
-ol.refs li{margin-bottom:8px}
+ol.refs li{margin-bottom:8px;scroll-margin-top:24px;padding:2px 4px;border-radius:3px;transition:background .3s}
+ol.refs li:target{background:var(--soft);outline:1px solid var(--rule)}
+a.cite{text-decoration:none;font-family:var(--sans);font-size:.9em}
+a.cite:hover{text-decoration:underline}
 .note{font:400 14.5px/1.5 var(--sans);color:var(--muted)}
 hr{border:0;border-top:1px solid var(--rule);margin:40px 0 0}
 </style>
@@ -97,17 +100,17 @@ hr{border:0;border-top:1px solid var(--rule);margin:40px 0 0}
 </nav>
 
 <h2 id="intro">1 Introduction</h2>
-<p>Supervised fine-tuning on reference solutions is the default way to teach a model a reasoning format. For small models it is not obviously the right choice: reference solutions are written by people for people, in a compressed style, and a small model may lack the capacity to follow the jumps they contain. Two alternatives train on what the model itself produces. Rejection-sampling fine-tuning samples several solutions per problem, keeps those with a correct final answer, and trains on them (Zelikman et al., 2022; Yuan et al., 2023). Reinforcement learning with a verifiable reward, here GRPO (Shao et al., 2024), uses only the correctness of the final answer.</p>
+<p>Supervised fine-tuning on reference solutions is the default way to teach a model a reasoning format. For small models it is not obviously the right choice: reference solutions are written by people for people, in a compressed style, and a small model may lack the capacity to follow the jumps they contain. Two alternatives train on what the model itself produces. Rejection-sampling fine-tuning samples several solutions per problem, keeps those with a correct final answer, and trains on them (Zelikman et al. <a class="cite" href="#ref-8">[8]</a>; Yuan et al. <a class="cite" href="#ref-7">[7]</a>). Reinforcement learning with a verifiable reward, here GRPO <a class="cite" href="#ref-6">[6]</a>, uses only the correctness of the final answer.</p>
 <p>We ask a narrow question under fixed model, data, prompt and compute: <em>on GSM8K-style problems, how do human-written, self-generated and outcome-rewarded supervision compare for a 0.5B model?</em> We report accuracy, answer format and length, and per-problem paired changes, and we examine why gold SFT underperforms.</p>
 <p><b>Contributions.</b> (i) A controlled, paired comparison of four recipes on two benchmarks, one of them held out from all training. (ii) Evidence that gold SFT damages previously solved problems rather than merely failing to add new ones. (iii) An explicit list of confounds and the controls that would remove them.</p>
 
 <h2 id="setup">2 Experimental setup</h2>
 <h3>Model, data and prompt</h3>
-<p>All runs start from <code>Qwen/Qwen2.5-0.5B-Instruct</code> (Qwen Team, 2024). Training data is the GSM8K training split (Cobbe et al., 2021), divided into 6,973 training and 500 validation problems (seed 42). Calculator annotations such as <code>&lt;&lt;48/2=24&gt;&gt;</code> are removed from the reference solutions. Test sets are GSM8K test (1,319) and SVAMP (1,000; Patel et al., 2021). SVAMP is never used for training or checkpoint selection. Every prompt is the problem followed by: <em>Solve the problem step by step. End your answer with a final line of the form '#### &lt;number&gt;'</em>, under the model's default chat template.</p>
+<p>All runs start from <code>Qwen/Qwen2.5-0.5B-Instruct</code> <a class="cite" href="#ref-5">[5]</a>. Training data is the GSM8K training split <a class="cite" href="#ref-2">[2]</a>, divided into 6,973 training and 500 validation problems (seed 42). Calculator annotations such as <code>&lt;&lt;48/2=24&gt;&gt;</code> are removed from the reference solutions. Test sets are GSM8K test (1,319) and SVAMP <a class="cite" href="#ref-4">[4]</a> (1,000). SVAMP is never used for training or checkpoint selection. Every prompt is the problem followed by: <em>Solve the problem step by step. End your answer with a final line of the form '#### &lt;number&gt;'</em>, under the model's default chat template.</p>
 <h3>Evaluation protocol</h3>
 <p>Greedy decoding, at most 512 new tokens, fp16 on NVIDIA T4 GPUs. The predicted answer is the first number after the last <code>####</code>; if the model emits none, the last number in the text. A prediction is correct if it equals the reference within 10<sup>−6</sup>. The same extraction and correctness functions are used for evaluation and for the GRPO reward. Every run answers the same problems in the same order, so comparisons are paired.</p>
 <h3>Statistics</h3>
-<p>Confidence intervals are percentile intervals from 10,000 bootstrap resamples of problems, with the same resamples applied to every model so that differences are paired. For each pair of models we also report the number of problems fixed (wrong then right) and broken (right then wrong) and an exact two-sided McNemar test on those discordant problems (McNemar, 1947).</p>
+<p>Confidence intervals are percentile intervals from 10,000 bootstrap resamples of problems, with the same resamples applied to every model so that differences are paired. For each pair of models we also report the number of problems fixed (wrong then right) and broken (right then wrong) and an exact two-sided McNemar test on those discordant problems <a class="cite" href="#ref-3">[3]</a>.</p>
 
 <h2 id="methods">3 Methods</h2>
 <h3>3.1 Zero-shot baseline</h3>
@@ -175,7 +178,7 @@ hr{border:0;border-top:1px solid var(--rule);margin:40px 0 0}
 <tr><td>pass@8</td><td>75.4%</td><td>63.9%</td></tr>
 <tr><td>Prompts with mixed correct and incorrect samples</td><td>65.6%</td><td>60.3%</td></tr>
 </tbody></table></div>
-<p class="cap"><b>Table 4.</b> Diagnostics. pass@k uses the unbiased estimator of Chen et al. (2021) with 8 samples per problem.</p>
+<p class="cap"><b>Table 4.</b> Diagnostics. pass@k uses the unbiased estimator of Chen et al. <a class="cite" href="#ref-1">[1]</a> with 8 samples per problem.</p>
 
 <figure id="fig2">
   <svg id="f2" viewBox="0 0 720 300" role="img" aria-label="pass@k on GSM8K test for zero-shot and gold SFT"></svg>
@@ -210,30 +213,30 @@ Thus, it takes 4+2=6 bolts in total.
 
 <h2 id="refs">References</h2>
 <ol class="refs">
-<li>Chen, M. et al. (2021). Evaluating large language models trained on code. arXiv:2107.03374.</li>
-<li>Cobbe, K. et al. (2021). Training verifiers to solve math word problems. arXiv:2110.14168.</li>
-<li>McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions or percentages. <i>Psychometrika</i>, 12(2), 153–157.</li>
-<li>Patel, A., Bhattamishra, S., Goyal, N. (2021). Are NLP models really able to solve simple math word problems? <i>NAACL</i>.</li>
-<li>Qwen Team (2024). Qwen2.5 technical report. arXiv:2412.15115.</li>
-<li>Shao, Z. et al. (2024). DeepSeekMath: pushing the limits of mathematical reasoning in open language models. arXiv:2402.03300.</li>
-<li>Yuan, Z. et al. (2023). Scaling relationship on learning mathematical reasoning with large language models. arXiv:2308.01825.</li>
-<li>Zelikman, E., Wu, Y., Mu, J., Goodman, N. (2022). STaR: bootstrapping reasoning with reasoning. arXiv:2203.14465.</li>
+<li id="ref-1">Chen, M. et al. (2021). Evaluating large language models trained on code. <a href="https://arxiv.org/abs/2107.03374">arXiv:2107.03374</a>.</li>
+<li id="ref-2">Cobbe, K. et al. (2021). Training verifiers to solve math word problems. <a href="https://arxiv.org/abs/2110.14168">arXiv:2110.14168</a>.</li>
+<li id="ref-3">McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions or percentages. <i>Psychometrika</i>, 12(2), 153–157.</li>
+<li id="ref-4">Patel, A., Bhattamishra, S., Goyal, N. (2021). Are NLP models really able to solve simple math word problems? <i>NAACL</i>. <a href="https://arxiv.org/abs/2103.07191">arXiv:2103.07191</a>.</li>
+<li id="ref-5">Qwen Team (2024). Qwen2.5 technical report. <a href="https://arxiv.org/abs/2412.15115">arXiv:2412.15115</a>.</li>
+<li id="ref-6">Shao, Z. et al. (2024). DeepSeekMath: pushing the limits of mathematical reasoning in open language models. <a href="https://arxiv.org/abs/2402.03300">arXiv:2402.03300</a>.</li>
+<li id="ref-7">Yuan, Z. et al. (2023). Scaling relationship on learning mathematical reasoning with large language models. <a href="https://arxiv.org/abs/2308.01825">arXiv:2308.01825</a>.</li>
+<li id="ref-8">Zelikman, E., Wu, Y., Mu, J., Goodman, N. D. (2022). STaR: bootstrapping reasoning with reasoning. <i>NeurIPS</i>. <a href="https://arxiv.org/abs/2203.14465">arXiv:2203.14465</a>.</li>
 </ol>
 
 <hr>
 <h2 id="appendix">Appendix A: Reproducibility</h2>
 <p>Experiments ran in Kaggle notebooks on two Tesla T4 GPUs with the Hugging Face Transformers and TRL libraries (GRPO run: TRL 1.17.1, vLLM 0.32.0, Transformers 5.19.0). Each notebook saves its config, metrics and logs, and the executed versions are public on Kaggle:</p>
 <div class="tw"><table>
-<thead><tr><th>Notebook</th><th>Content</th><th>GPU-h</th><th>Link</th></tr></thead>
+<thead><tr><th>Notebook</th><th>Content</th><th>Link</th></tr></thead>
 <tbody>
-<tr><td>00</td><td class="l">Data splits and cleaning</td><td>CPU</td><td><a href="https://www.kaggle.com/code/tensorpanda231/00-data-math-reasoning">Kaggle</a></td></tr>
-<tr><td>01</td><td class="l">Zero-shot evaluation (Table 2)</td><td>0.24</td><td><a href="https://www.kaggle.com/code/tensorpanda231/01-zeroshot-qwen2-5-0-5b">Kaggle</a></td></tr>
-<tr><td>02</td><td class="l">Gold SFT training and evaluation</td><td>0.57</td><td><a href="https://www.kaggle.com/code/tensorpanda231/02-sft-0-5b">Kaggle</a></td></tr>
-<tr><td>03</td><td class="l">Gold SFT versus zero-shot: flips, McNemar, length, pass@k (Table 4, Figure 2)</td><td>2.5</td><td><a href="https://www.kaggle.com/code/tensorpanda231/03-sft-vs-zeroshot">Kaggle</a></td></tr>
-<tr><td>04</td><td class="l">RFT data generation: 16,515 answers, train pass@1 50.0%, pass@8 86.0%, truncation 5.0%</td><td>6.5</td><td><a href="https://www.kaggle.com/code/tensorpanda231/04-rft-data">Kaggle</a></td></tr>
-<tr><td>05</td><td class="l">SFT on RFT data, selection by validation accuracy</td><td>5.1</td><td><a href="https://www.kaggle.com/code/tensorpanda231/05-sft-with-rft-qwen-05b">Kaggle</a></td></tr>
-<tr><td>06</td><td class="l">GRPO from the RFT checkpoint</td><td>19.2</td><td><a href="https://www.kaggle.com/code/tensorpanda231/06-grpo-0-5b">Kaggle</a></td></tr>
-<tr><td>12</td><td class="l">Paired bootstrap intervals, fixed/broken counts, McNemar for all pairs (Tables 2 and 3)</td><td>CPU</td><td><a href="https://www.kaggle.com/code/tensorpanda231/12-compare-0-5b">Kaggle</a></td></tr>
+<tr><td>00</td><td class="l">Data splits and cleaning</td><td><a href="https://www.kaggle.com/code/tensorpanda231/00-data-math-reasoning">Kaggle</a></td></tr>
+<tr><td>01</td><td class="l">Zero-shot evaluation (Table 2)</td><td><a href="https://www.kaggle.com/code/tensorpanda231/01-zeroshot-qwen2-5-0-5b">Kaggle</a></td></tr>
+<tr><td>02</td><td class="l">Gold SFT training and evaluation</td><td><a href="https://www.kaggle.com/code/tensorpanda231/02-sft-0-5b">Kaggle</a></td></tr>
+<tr><td>03</td><td class="l">Gold SFT versus zero-shot: flips, McNemar, length, pass@k (Table 4, Figure 2)</td><td><a href="https://www.kaggle.com/code/tensorpanda231/03-sft-vs-zeroshot">Kaggle</a></td></tr>
+<tr><td>04</td><td class="l">RFT data generation: 16,515 answers, train pass@1 50.0%, pass@8 86.0%, truncation 5.0%</td><td><a href="https://www.kaggle.com/code/tensorpanda231/04-rft-data">Kaggle</a></td></tr>
+<tr><td>05</td><td class="l">SFT on RFT data, selection by validation accuracy</td><td><a href="https://www.kaggle.com/code/tensorpanda231/05-sft-with-rft-qwen-05b">Kaggle</a></td></tr>
+<tr><td>06</td><td class="l">GRPO from the RFT checkpoint</td><td><a href="https://www.kaggle.com/code/tensorpanda231/06-grpo-0-5b">Kaggle</a></td></tr>
+<tr><td>12</td><td class="l">Paired bootstrap intervals, fixed/broken counts, McNemar for all pairs (Tables 2 and 3)</td><td><a href="https://www.kaggle.com/code/tensorpanda231/12-compare-0-5b">Kaggle</a></td></tr>
 </tbody></table></div>
 <p class="note">Of all 8-sample base-model outputs on the training set, 54.7% ended with a boxed answer, 33.5% with a <code>####</code> line and 11.8% with neither, which is why the RFT extractor accepts boxed answers and the data builder appends the <code>####</code> line.</p>
 </main>
