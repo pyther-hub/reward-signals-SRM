@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Generated vs Human-Written Supervision</title>
+<meta name="description" content="A paired study of gold SFT, rejection-sampling fine-tuning and GRPO for Qwen2.5-0.5B on GSM8K and SVAMP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#16181D; --muted:#5A6070; --rule:#C9CDD6; --soft:#F3F4F7;
+  --zs:#7B8496; --human:#C26A12; --own:#0B8A88; --rl:#1D4FB0;
+  --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --sans:'Source Sans 3','Helvetica Neue',Arial,sans-serif;
+  --mono:'Source Code Pro',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151B; --ink:#E6E8EE; --muted:#9AA1B1; --rule:#343A47; --soft:#1B1F28;
+    --zs:#8D96A8; --human:#E8964A; --own:#36B8B4; --rl:#7AA4F2; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151B; --ink:#E6E8EE; --muted:#9AA1B1; --rule:#343A47; --soft:#1B1F28;
+  --zs:#8D96A8; --human:#E8964A; --own:#36B8B4; --rl:#7AA4F2; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.65 var(--serif);-webkit-font-smoothing:antialiased}
+main{max-width:700px;margin:0 auto;padding:56px 16px 90px}
+h1{font:600 clamp(26px,5vw,34px)/1.2 var(--serif);margin:0 0 14px;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 21px/1.3 var(--serif);margin:46px 0 10px}
+h3{font:600 17px/1.4 var(--serif);font-style:italic;margin:26px 0 6px}
+p{margin:0 0 14px}
+a{color:var(--rl)}
+:focus-visible{outline:2px solid var(--rl);outline-offset:2px}
+.meta{font:400 15px/1.5 var(--sans);color:var(--muted);margin-bottom:26px}
+.meta b{color:var(--ink);font-weight:600}
+.abs{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:16px 0;margin:0 0 8px}
+.abs h2{font:600 13px var(--sans);text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+.abs p{font-size:16px;margin:0 0 10px}
+.abs p:last-child{margin:0}
+.kw{font:400 14px var(--sans);color:var(--muted)}
+nav.toc{font:400 14.5px/1.7 var(--sans);color:var(--muted);margin:18px 0 0}
+nav.toc a{color:var(--muted);text-decoration:none;margin-right:12px;white-space:nowrap}
+nav.toc a:hover{color:var(--ink);text-decoration:underline}
+code,.m{font-family:var(--mono);font-size:.86em}
+figure{margin:22px 0}
+figcaption,.cap{font:400 14.5px/1.5 var(--sans);color:var(--muted);margin-top:8px}
+figcaption b,.cap b{color:var(--ink);font-weight:600}
+svg{display:block;width:100%;height:auto;font-family:var(--sans)}
+svg text{fill:var(--ink)}
+svg .mut{fill:var(--muted)}
+svg .grid{stroke:var(--rule);stroke-width:1}
+svg .ax{stroke:var(--ink);stroke-width:1}
+svg .ci{stroke:var(--ink);stroke-width:1.4}
+.tw{overflow-x:auto;margin:20px 0 4px}
+table{border-collapse:collapse;width:100%;font:400 14.5px/1.4 var(--sans);font-variant-numeric:tabular-nums;min-width:560px}
+thead th{border-top:1.5px solid var(--ink);border-bottom:1px solid var(--ink);font-weight:600;padding:7px 8px;text-align:right;vertical-align:bottom}
+thead th:first-child,tbody td:first-child{text-align:left}
+tbody td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:1.5px solid var(--ink)}
+tbody td small{display:block;color:var(--muted);font-size:12.5px}
+td.l{text-align:left}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+@media (max-width:680px){.cmp{grid-template-columns:1fr}}
+.ex{border:1px solid var(--rule);border-radius:4px}
+.ex h4{margin:0;padding:6px 10px;font:600 12.5px var(--sans);border-bottom:1px solid var(--rule);background:var(--soft)}
+.ex pre{margin:0;padding:10px;font:400 12.5px/1.55 var(--mono);white-space:pre-wrap}
+ol.refs{padding-left:22px;font-size:15px;line-height:1.5}
+ol.refs li{margin-bottom:8px}
+.note{font:400 14.5px/1.5 var(--sans);color:var(--muted)}
+hr{border:0;border-top:1px solid var(--rule);margin:40px 0 0}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <div class="meta"><b>Technical report</b> · November 2026 · not peer reviewed</div>
+  <h1>Self-Generated versus Human-Written Supervision for Small-Model Math Reasoning: A Paired Study with Qwen2.5-0.5B</h1>
+  <div class="meta"><b>Sudhanshu</b><br>Code and run logs: <a href="https://github.com/pyther-hub/reward-signals-SRM">github.com/pyther-hub/reward-signals-SRM</a></div>
+</header>
+
+<section class="abs" id="abstract">
+  <h2>Abstract</h2>
+  <p>We compare four ways of adapting Qwen2.5-0.5B-Instruct to grade-school math: no adaptation, supervised fine-tuning (SFT) on human-written GSM8K solutions, SFT on the model's own correct solutions selected by rejection sampling (RFT), and Group Relative Policy Optimization (GRPO) with a binary final-answer reward. All four are evaluated with identical prompts and greedy decoding on GSM8K test (n=1,319) and SVAMP (n=1,000), a set never used in training, and compared with paired bootstrap intervals and exact McNemar tests.</p>
+  <p>SFT on human solutions lowered accuracy from 43.7% to 32.7% on GSM8K and from 53.7% to 35.5% on SVAMP; it turned 283 of 577 solved GSM8K problems into errors. SFT on the model's own correct solutions reached 49.4% and 61.9%, and GRPO from that checkpoint reached 54.4% and 63.2%. The GRPO gain over RFT is significant on GSM8K (+5.0 points, 95% CI 2.7 to 7.4) but not on SVAMP (+1.3, CI −1.5 to 4.1). Gold SFT shortened answers to about a third of their original length and lowered pass@k at every k. The comparison has confounds, chiefly a different checkpoint-selection rule for the gold-SFT run and a single seed per recipe, and we list the controls still needed.</p>
+  <p class="kw"><b>Keywords:</b> small language models, mathematical reasoning, rejection-sampling fine-tuning, GRPO, verifiable rewards</p>
+</section>
+<nav class="toc" aria-label="Contents">
+  <a href="#intro">1 Introduction</a><a href="#setup">2 Setup</a><a href="#methods">3 Methods</a><a href="#results">4 Results</a><a href="#analysis">5 Analysis</a><a href="#limits">6 Limitations</a><a href="#conclusion">7 Conclusion</a><a href="#refs">References</a><a href="#appendix">Appendix</a>
+</nav>
+
+<h2 id="intro">1 Introduction</h2>
+<p>Supervised fine-tuning on reference solutions is the default way to teach a model a reasoning format. For small models it is not obviously the right choice: reference solutions are written by people for people, in a compressed style, and a small model may lack the capacity to follow the jumps they contain. Two alternatives train on what the model itself produces. Rejection-sampling fine-tuning samples several solutions per problem, keeps those with a correct final answer, and trains on them (Zelikman et al., 2022; Yuan et al., 2023). Reinforcement learning with a verifiable reward, here GRPO (Shao et al., 2024), uses only the correctness of the final answer.</p>
+<p>We ask a narrow question under fixed model, data, prompt and compute: <em>on GSM8K-style problems, how do human-written, self-generated and outcome-rewarded supervision compare for a 0.5B model?</em> We report accuracy, answer format and length, and per-problem paired changes, and we examine why gold SFT underperforms.</p>
+<p><b>Contributions.</b> (i) A controlled, paired comparison of four recipes on two benchmarks, one of them held out from all training. (ii) Evidence that gold SFT damages previously solved problems rather than merely failing to add new ones. (iii) An explicit list of confounds and the controls that would remove them.</p>
+
+<h2 id="setup">2 Experimental setup</h2>
+<h3>Model, data and prompt</h3>
+<p>All runs start from <code>Qwen/Qwen2.5-0.5B-Instruct</code> (Qwen Team, 2024). Training data is the GSM8K training split (Cobbe et al., 2021), divided into 6,973 training and 500 validation problems (seed 42). Calculator annotations such as <code>&lt;&lt;48/2=24&gt;&gt;</code> are removed from the reference solutions. Test sets are GSM8K test (1,319) and SVAMP (1,000; Patel et al., 2021). SVAMP is never used for training or checkpoint selection. Every prompt is the problem followed by: <em>Solve the problem step by step. End your answer with a final line of the form '#### &lt;number&gt;'</em>, under the model's default chat template.</p>
+<h3>Evaluation protocol</h3>
+<p>Greedy decoding, at most 512 new tokens, fp16 on NVIDIA T4 GPUs. The predicted answer is the first number after the last <code>####</code>; if the model emits none, the last number in the text. A prediction is correct if it equals the reference within 10<sup>−6</sup>. The same extraction and correctness functions are used for evaluation and for the GRPO reward. Every run answers the same problems in the same order, so comparisons are paired.</p>
+<h3>Statistics</h3>
+<p>Confidence intervals are percentile intervals from 10,000 bootstrap resamples of problems, with the same resamples applied to every model so that differences are paired. For each pair of models we also report the number of problems fixed (wrong then right) and broken (right then wrong) and an exact two-sided McNemar test on those discordant problems (McNemar, 1947).</p>
+
+<h2 id="methods">3 Methods</h2>
+<h3>3.1 Zero-shot baseline</h3>
+<p>The released model with the prompt above and no further training.</p>
+<h3>3.2 SFT on human solutions (gold SFT)</h3>
+<p>Full fine-tuning on the 6,973 reference solutions, with loss on answer tokens only. Checkpoints are evaluated four times per epoch on validation loss, and the lowest-loss checkpoint is kept (early stopping, patience 3).</p>
+<h3>3.3 SFT on own solutions (RFT)</h3>
+<p><b>Data.</b> The base model produced 8 samples per problem at temperature 0.7 (no top-k, top-p or repetition penalty) for the 6,973 training and 500 validation problems. A sample is kept if its answer is correct under a stricter extractor (number after the last <code>####</code>, else in the last <code>\boxed{}</code>, no last-number fallback) and it was not truncated. If a kept answer does not end in a <code>####</code> line, <code>#### &lt;gold&gt;</code> is appended and the text is otherwise unchanged. Answers are deduplicated per problem by their sequence of equations, keeping at most four. This yields 16,515 training answers for 5,982 of 6,973 problems.</p>
+<p><b>Training.</b> Same optimizer settings as gold SFT. The checkpoint is chosen by greedy accuracy on the 500 validation problems (evaluated four times per epoch, patience 3) rather than validation loss.</p>
+<h3>3.4 GRPO</h3>
+<p>Initialised from the RFT checkpoint. For each prompt, 8 completions are sampled at temperature 1.0. The reward is 1 if the completion contains a <code>####</code> line whose number is correct and 0 otherwise. Advantages are normalised within each group of 8, with a KL penalty to the initial policy (β=0.04). Prompts exclude the training problems the base model answered correctly in all 8 samples, leaving 6,279. Greedy validation accuracy is measured every 50 steps and the best checkpoint is kept.</p>
+<div class="tw"><table>
+<thead><tr><th>Setting</th><th>Gold SFT</th><th>RFT SFT</th><th>GRPO</th></tr></thead>
+<tbody>
+<tr><td>Training examples</td><td>6,973 gold solutions</td><td>16,515 own solutions</td><td>6,279 prompts, 8 samples each</td></tr>
+<tr><td>Updated parameters</td><td>all</td><td>all</td><td>all</td></tr>
+<tr><td>Learning rate</td><td>1e-5, cosine, 3% warmup</td><td>1e-5, cosine, 3% warmup</td><td>1e-6, constant, 10 warmup steps</td></tr>
+<tr><td>Batch</td><td>64 sequences</td><td>64 sequences</td><td>32 prompts × 8 = 256 samples</td></tr>
+<tr><td>Length</td><td>3 epochs, max 640 tokens</td><td>3 epochs, max 768 tokens</td><td>up to 400 steps, 9.5 h cap</td></tr>
+<tr><td>Checkpoint rule</td><td>lowest validation loss</td><td>best validation accuracy</td><td>best validation accuracy</td></tr>
+</tbody></table></div>
+<p class="cap"><b>Table 1.</b> Training configurations. All runs used two T4 GPUs; GRPO generated with vLLM on one GPU and trained on the other.</p>
+
+<h2 id="results">4 Results</h2>
+<div class="tw"><table>
+<thead><tr><th rowspan="2">Model</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--rule)">GSM8K test (n=1,319)</th><th colspan="3" style="text-align:center;border-bottom:1px solid var(--rule)">SVAMP (n=1,000)</th></tr>
+<tr><th>Acc. (%)</th><th>95% CI</th><th>#### rate</th><th>Acc. (%)</th><th>95% CI</th><th>#### rate</th></tr></thead>
+<tbody>
+<tr><td><i class="sw" style="background:var(--zs)"></i>Zero-shot</td><td>43.7</td><td>41.0–46.5</td><td>16.5</td><td>53.7</td><td>50.6–56.8</td><td>36.4</td></tr>
+<tr><td><i class="sw" style="background:var(--human)"></i>Gold SFT</td><td>32.7</td><td>30.2–35.2</td><td>99.6</td><td>35.5</td><td>32.5–38.5</td><td>100.0</td></tr>
+<tr><td><i class="sw" style="background:var(--own)"></i>RFT SFT</td><td>49.4</td><td>46.7–52.0</td><td>94.4</td><td>61.9</td><td>58.8–64.9</td><td>99.3</td></tr>
+<tr><td><i class="sw" style="background:var(--rl)"></i>GRPO</td><td><b>54.4</b></td><td>51.7–57.1</td><td>94.4</td><td><b>63.2</b></td><td>60.2–66.2</td><td>99.0</td></tr>
+</tbody></table></div>
+<p class="cap"><b>Table 2.</b> Greedy accuracy with 95% paired-bootstrap intervals, and the share of answers that contain a <code>####</code> line. Validation accuracy: zero-shot 57.8%, gold SFT 43.4%, RFT 66.6%, GRPO 69.8% (500 problems).</p>
+
+<figure id="fig1">
+  <svg id="f1" viewBox="0 0 720 330" role="img" aria-label="Grouped bar chart of accuracy by model on GSM8K and SVAMP with confidence intervals"></svg>
+  <figcaption><b>Figure 1.</b> Accuracy by recipe and test set. Whiskers are 95% bootstrap intervals.</figcaption>
+</figure>
+
+<p>Gold SFT is the only recipe below the zero-shot baseline, and its interval does not overlap zero-shot on either set. RFT and GRPO both improve on zero-shot on both sets. Mean answer length is stable across zero-shot, RFT and GRPO (about 1,000 characters on GSM8K) and about four times shorter after gold SFT (247 characters).</p>
+
+<h3>4.1 Paired comparisons</h3>
+<div class="tw"><table>
+<thead><tr><th rowspan="2">A → B</th><th colspan="4" style="text-align:center;border-bottom:1px solid var(--rule)">GSM8K</th><th colspan="4" style="text-align:center;border-bottom:1px solid var(--rule)">SVAMP</th></tr>
+<tr><th>Δ (pts)</th><th>95% CI</th><th>Fixed / broken</th><th>p</th><th>Δ (pts)</th><th>95% CI</th><th>Fixed / broken</th><th>p</th></tr></thead>
+<tbody>
+<tr><td>Zero-shot → Gold SFT</td><td>−11.1</td><td>−14.2, −8.0</td><td>137 / 283</td><td>&lt;0.001</td><td>−18.2</td><td>−21.6, −14.8</td><td>75 / 257</td><td>&lt;0.001</td></tr>
+<tr><td>Zero-shot → RFT SFT</td><td>+5.6</td><td>3.0, 8.3</td><td>193 / 119</td><td>&lt;0.001</td><td>+8.2</td><td>5.1, 11.3</td><td>168 / 86</td><td>&lt;0.001</td></tr>
+<tr><td>Zero-shot → GRPO</td><td>+10.6</td><td>8.0, 13.3</td><td>232 / 92</td><td>&lt;0.001</td><td>+9.5</td><td>6.3, 12.6</td><td>180 / 85</td><td>&lt;0.001</td></tr>
+<tr><td>Gold SFT → RFT SFT</td><td>+16.7</td><td>13.7, 19.7</td><td>326 / 106</td><td>&lt;0.001</td><td>+26.4</td><td>23.1, 29.9</td><td>315 / 51</td><td>&lt;0.001</td></tr>
+<tr><td>RFT SFT → GRPO</td><td>+5.0</td><td>2.7, 7.4</td><td>155 / 89</td><td>&lt;0.001</td><td>+1.3</td><td>−1.5, 4.1</td><td>106 / 93</td><td>0.395</td></tr>
+</tbody></table></div>
+<p class="cap"><b>Table 3.</b> Paired differences. <i>Fixed</i>: A wrong, B right. <i>Broken</i>: A right, B wrong. p is an exact two-sided McNemar test on fixed versus broken. Intervals use the resamples behind Table 2.</p>
+<p>Relative to zero-shot, gold SFT breaks more problems than it fixes on both sets. On GSM8K, of the 577 problems zero-shot solved, 283 (49%) were answered wrongly after gold SFT, while 137 unsolved problems were fixed; on SVAMP the figures are 257 of 537 (48%) and 75. In every other comparison in Table 3, B fixes more problems than it breaks. The RFT-to-GRPO step is significant on GSM8K and not on SVAMP, where the interval contains zero. GSM8K is the training distribution and SVAMP is held out, so the SVAMP result is the cleaner test of transfer: the route from zero-shot to GRPO yields +9.5 points there.</p>
+
+<h2 id="analysis">5 Analysis of the gold-SFT drop</h2>
+<p>We examined the following diagnostics, computed on GSM8K from the base and gold-SFT models (Table 4, Figure 2).</p>
+<div class="tw"><table>
+<thead><tr><th>Measurement</th><th>Zero-shot / own text</th><th>Gold SFT / human text</th></tr></thead>
+<tbody>
+<tr><td>Median length on GSM8K train, tokens<small>own kept solutions vs gold references</small></td><td>267</td><td>82</td></tr>
+<tr><td>Mean sampled answer length on test, tokens (T=0.7)</td><td>304.9</td><td>101.7</td></tr>
+<tr><td>Sample accuracy, pass@1 (n=8, T=0.7)</td><td>41.7%</td><td>27.1%</td></tr>
+<tr><td>pass@8</td><td>75.4%</td><td>63.9%</td></tr>
+<tr><td>Prompts with mixed correct and incorrect samples</td><td>65.6%</td><td>60.3%</td></tr>
+</tbody></table></div>
+<p class="cap"><b>Table 4.</b> Diagnostics. pass@k uses the unbiased estimator of Chen et al. (2021) with 8 samples per problem.</p>
+
+<figure id="fig2">
+  <svg id="f2" viewBox="0 0 720 300" role="img" aria-label="pass@k on GSM8K test for zero-shot and gold SFT"></svg>
+  <figcaption><b>Figure 2.</b> pass@k on GSM8K test, temperature 0.7, 8 samples per problem. Gold SFT is lower at every k, so the loss in Table 2 is not an artefact of greedy decoding.</figcaption>
+</figure>
+
+<p>The reference solutions are about a third as long as the model's own correct solutions, and the tuned model adopts that shorter style (Table 4). Both pass@1 and pass@8 fall, and the share of prompts with mixed outcomes, which is what GRPO can learn from, also falls slightly. The drop appears at every difficulty level, measured by the number of steps in the reference solution. A plausible account is that imitating the compressed human style replaces the step-by-step reasoning the model relies on. We did not intervene on style, for example by paraphrasing the gold solutions into the model's own format, so these results are correlational.</p>
+<div class="cmp">
+  <div class="ex"><h4>Zero-shot, correct (abridged)</h4><pre>Blue fiber: 2 bolts.
+White fiber is half of blue:
+2/2 = 1 bolt.
+Total = 2 + 1 = 3.
+\boxed{3}</pre></div>
+  <div class="ex"><h4>After gold SFT, wrong</h4><pre>It takes 2*2=4 bolts of blue fiber.
+So it takes 4/2=2 more white bolts than blue ones.
+Thus, it takes 4+2=6 bolts in total.
+#### 6</pre></div>
+</div>
+<p class="cap"><b>Example.</b> GSM8K test, <em>"A robe takes 2 bolts of blue fiber and half that much white fiber. How many bolts in total does it take?"</em> (reference answer 3). The gold-SFT output introduces a quantity the problem does not ask for.</p>
+
+<h2 id="limits">6 Limitations and threats to validity</h2>
+<p><b>Checkpoint selection differs.</b> Gold SFT kept the lowest validation loss; RFT and GRPO kept the best validation accuracy, a change made after observing that loss and accuracy can diverge. The gold-to-RFT difference therefore combines the data source and the selection rule. Re-running gold SFT with accuracy-based selection would isolate the data effect, and may narrow the gap.</p>
+<p><b>Answer-format confound.</b> Only 16.5% of zero-shot GSM8K answers contained a <code>####</code> line (36.4% on SVAMP), so most were scored by the last-number fallback, which can read the wrong number from a long answer. Part of the improvement over zero-shot may reflect cleaner answers and not better reasoning. A boxed-aware extractor for the zero-shot model would bound this.</p>
+<p><b>Single seed.</b> Each recipe was trained once. The intervals capture sampling of test problems, not variation between training runs, so small differences such as RFT versus GRPO on SVAMP should not be over-read.</p>
+<p><b>Validation is easier than test.</b> Validation accuracy is 11–17 points above test accuracy for every model, including the untrained one (57.8% versus 43.7%), which suggests the GSM8K training split was seen in pretraining. Validation is used only to choose checkpoints.</p>
+<p><b>Outcome-reward scope.</b> GRPO prompts exclude problems the base model solves 8 of 8, and the reward does not check intermediate steps; a correct answer reached by faulty reasoning is rewarded. We did not audit reasoning quality, and GRPO was run for a fixed budget (up to 400 steps, 9.5 h cap) without a convergence analysis; validation accuracy was still rising when it stopped.</p>
+<p><b>Scope of the claim.</b> One model size, one task family, one prompt. The results concern how to train a model of fixed size.</p>
+<p><b>Not tested.</b> Whether own-solution supervision helps because it matches the model's own distribution, rather than because of length, format or data volume (16,515 versus 6,973 examples), is not separated here.</p>
+
+<h2 id="conclusion">7 Conclusion</h2>
+<p>For Qwen2.5-0.5B-Instruct on GSM8K-style problems, supervised fine-tuning on human reference solutions reduced accuracy and broke about half of the problems the model already solved, while fine-tuning on its own correct solutions and then optimising a binary answer reward improved accuracy on both a training-distribution and a held-out benchmark. The gold-SFT result is robust in direction across both sets, but its size is confounded by checkpoint selection, and the mechanism remains a hypothesis supported by length and pass@k diagnostics. The planned controls are: accuracy-based selection for gold SFT, a boxed-aware zero-shot score, multiple seeds, and a style-matched paraphrase of the gold solutions.</p>
+
+<h2 id="refs">References</h2>
+<ol class="refs">
+<li>Chen, M. et al. (2021). Evaluating large language models trained on code. arXiv:2107.03374.</li>
+<li>Cobbe, K. et al. (2021). Training verifiers to solve math word problems. arXiv:2110.14168.</li>
+<li>McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions or percentages. <i>Psychometrika</i>, 12(2), 153–157.</li>
+<li>Patel, A., Bhattamishra, S., Goyal, N. (2021). Are NLP models really able to solve simple math word problems? <i>NAACL</i>.</li>
+<li>Qwen Team (2024). Qwen2.5 technical report. arXiv:2412.15115.</li>
+<li>Shao, Z. et al. (2024). DeepSeekMath: pushing the limits of mathematical reasoning in open language models. arXiv:2402.03300.</li>
+<li>Yuan, Z. et al. (2023). Scaling relationship on learning mathematical reasoning with large language models. arXiv:2308.01825.</li>
+<li>Zelikman, E., Wu, Y., Mu, J., Goodman, N. (2022). STaR: bootstrapping reasoning with reasoning. arXiv:2203.14465.</li>
+</ol>
+
+<hr>
+<h2 id="appendix">Appendix A: Reproducibility</h2>
+<p>Experiments ran in Kaggle notebooks on two Tesla T4 GPUs with the Hugging Face Transformers and TRL libraries (GRPO run: TRL 1.17.1, vLLM 0.32.0, Transformers 5.19.0). Each notebook saves its config, metrics and logs, and the executed versions are public on Kaggle:</p>
+<div class="tw"><table>
+<thead><tr><th>Notebook</th><th>Content</th><th>GPU-h</th><th>Link</th></tr></thead>
+<tbody>
+<tr><td>00</td><td class="l">Data splits and cleaning</td><td>CPU</td><td><a href="https://www.kaggle.com/code/tensorpanda231/00-data-math-reasoning">Kaggle</a></td></tr>
+<tr><td>01</td><td class="l">Zero-shot evaluation (Table 2)</td><td>0.24</td><td><a href="https://www.kaggle.com/code/tensorpanda231/01-zeroshot-qwen2-5-0-5b">Kaggle</a></td></tr>
+<tr><td>02</td><td class="l">Gold SFT training and evaluation</td><td>0.57</td><td><a href="https://www.kaggle.com/code/tensorpanda231/02-sft-0-5b">Kaggle</a></td></tr>
+<tr><td>03</td><td class="l">Gold SFT versus zero-shot: flips, McNemar, length, pass@k (Table 4, Figure 2)</td><td>2.5</td><td><a href="https://www.kaggle.com/code/tensorpanda231/03-sft-vs-zeroshot">Kaggle</a></td></tr>
+<tr><td>04</td><td class="l">RFT data generation: 16,515 answers, train pass@1 50.0%, pass@8 86.0%, truncation 5.0%</td><td>6.5</td><td><a href="https://www.kaggle.com/code/tensorpanda231/04-rft-data">Kaggle</a></td></tr>
+<tr><td>05</td><td class="l">SFT on RFT data, selection by validation accuracy</td><td>5.1</td><td><a href="https://www.kaggle.com/code/tensorpanda231/05-sft-with-rft-qwen-05b">Kaggle</a></td></tr>
+<tr><td>06</td><td class="l">GRPO from the RFT checkpoint</td><td>19.2</td><td><a href="https://www.kaggle.com/code/tensorpanda231/06-grpo-0-5b">Kaggle</a></td></tr>
+<tr><td>12</td><td class="l">Paired bootstrap intervals, fixed/broken counts, McNemar for all pairs (Tables 2 and 3)</td><td>CPU</td><td><a href="https://www.kaggle.com/code/tensorpanda231/12-compare-0-5b">Kaggle</a></td></tr>
+</tbody></table></div>
+<p class="note">Of all 8-sample base-model outputs on the training set, 54.7% ended with a boxed answer, 33.5% with a <code>####</code> line and 11.8% with neither, which is why the RFT extractor accepts boxed answers and the data builder appends the <code>####</code> line.</p>
+</main>
+
+<script>
+const C={zs:'var(--zs)',sft:'var(--human)',rft:'var(--own)',grpo:'var(--rl)'};
+const NAMES={zs:'Zero-shot',sft:'Gold SFT',rft:'RFT SFT',grpo:'GRPO'};
+const ACC={gsm8k:{zs:[43.7,41.0,46.5],sft:[32.7,30.2,35.2],rft:[49.4,46.7,52.0],grpo:[54.4,51.7,57.1]},
+           svamp:{zs:[53.7,50.6,56.8],sft:[35.5,32.5,38.5],rft:[61.9,58.8,64.9],grpo:[63.2,60.2,66.2]}};
+const NS='http://www.w3.org/2000/svg';
+function el(p,n,a,t){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;p.appendChild(e);return e;}
+
+(function fig1(){
+  const s=document.getElementById('f1'), L=54,R=710,T=16,B=262,YM=70;
+  const y=v=>B-(B-T)*v/YM;
+  for(let v=0;v<=YM;v+=10){el(s,'line',{x1:L,x2:R,y1:y(v),y2:y(v),class:v?'grid':'ax'});el(s,'text',{x:L-8,y:y(v)+4,'text-anchor':'end','font-size':11,class:'mut'},v);}
+  el(s,'text',{x:14,y:(T+B)/2,transform:`rotate(-90 14 ${(T+B)/2})`,'text-anchor':'middle','font-size':12,class:'mut'},'Accuracy (%)');
+  const bw=40,g=10,gw=4*bw+3*g,gap=70,x0=L+((R-L)-(2*gw+gap))/2;
+  ['gsm8k','svamp'].forEach((d,gi)=>{
+    const gx=x0+gi*(gw+gap);
+    ['zs','sft','rft','grpo'].forEach((k,i)=>{
+      const [v,lo,hi]=ACC[d][k], x=gx+i*(bw+g);
+      el(s,'rect',{x,y:y(v),width:bw,height:B-y(v),fill:C[k]});
+      const cx=x+bw/2;
+      el(s,'line',{x1:cx,x2:cx,y1:y(lo),y2:y(hi),class:'ci'});
+      el(s,'line',{x1:cx-5,x2:cx+5,y1:y(lo),y2:y(lo),class:'ci'});
+      el(s,'line',{x1:cx-5,x2:cx+5,y1:y(hi),y2:y(hi),class:'ci'});
+      el(s,'text',{x:cx,y:y(hi)-6,'text-anchor':'middle','font-size':12,'font-weight':600},v.toFixed(1));
+      el(s,'text',{x:cx,y:B+16,'text-anchor':'middle','font-size':11,class:'mut'},NAMES[k]);
+    });
+    el(s,'text',{x:gx+gw/2,y:B+44,'text-anchor':'middle','font-size':13,'font-weight':600},d==='gsm8k'?'GSM8K test (n = 1,319)':'SVAMP (n = 1,000)');
+  });
+})();
+
+(function fig2(){
+  const s=document.getElementById('f2'), L=54,R=700,T=16,B=240;
+  const ks=[1,2,4,8], x=k=>L+(R-L)*(Math.log2(k)/3)*0.92+20, y=v=>B-(B-T)*v/100;
+  for(let v=0;v<=100;v+=20){el(s,'line',{x1:L,x2:R,y1:y(v),y2:y(v),class:v?'grid':'ax'});el(s,'text',{x:L-8,y:y(v)+4,'text-anchor':'end','font-size':11,class:'mut'},v);}
+  el(s,'text',{x:14,y:(T+B)/2,transform:`rotate(-90 14 ${(T+B)/2})`,'text-anchor':'middle','font-size':12,class:'mut'},'pass@k (%)');
+  const S={zs:[41.7,55.0,66.2,75.4],sft:[27.1,39.1,51.7,63.9]};
+  ks.forEach(k=>{el(s,'text',{x:x(k),y:B+18,'text-anchor':'middle','font-size':12,class:'mut'},'k = '+k);});
+  Object.keys(S).forEach(m=>{
+    el(s,'polyline',{points:ks.map((k,i)=>x(k)+','+y(S[m][i])).join(' '),fill:'none',stroke:C[m],'stroke-width':2.2});
+    ks.forEach((k,i)=>{
+      el(s,'circle',{cx:x(k),cy:y(S[m][i]),r:4,fill:C[m]});
+      el(s,'text',{x:x(k),y:y(S[m][i])+(m==='zs'?-10:18),'text-anchor':'middle','font-size':12,'font-weight':600},S[m][i].toFixed(1));
+    });
+  });
+  el(s,'rect',{x:L+14,y:T+4,width:10,height:10,fill:C.zs});el(s,'text',{x:L+30,y:T+13,'font-size':12},'Zero-shot');
+  el(s,'rect',{x:L+110,y:T+4,width:10,height:10,fill:C.sft});el(s,'text',{x:L+126,y:T+13,'font-size':12},'Gold SFT');
+})();
+</script>
+</body>
+</html>
